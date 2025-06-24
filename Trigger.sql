@@ -1,6 +1,8 @@
 USE EmpresaTransporteAereo;
 
 -- 1. Trigger para atualizar status do portão quando um voo é associado
+-- Atualiza Portão: Libera o portão antigo e ocupa o novo quando um voo muda de portão.
+
 DELIMITER //
 CREATE TRIGGER trg_voo_portao_update
 BEFORE UPDATE ON Voo
@@ -22,6 +24,7 @@ END //
 DELIMITER ;
 
 -- 2. Trigger para registrar mudanças de status de voo
+-- Registra Status: Grava no histórico quando o status de um voo é alterado.
 DELIMITER //
 CREATE TRIGGER trg_voo_status_change
 AFTER UPDATE ON Voo
@@ -35,6 +38,7 @@ END //
 DELIMITER ;
 
 -- 3. Trigger para atualizar horas de voo da aeronave
+-- Horas de Voo: Soma as horas de voo na aeronave quando o voo é concluído.
 DELIMITER //
 CREATE TRIGGER trg_voo_horas_voo
 AFTER UPDATE ON Voo
@@ -56,6 +60,7 @@ END //
 DELIMITER ;
 
 -- 4. Trigger para verificar disponibilidade de poltrona antes de reservar
+-- Verifica Assento: Impede reserva se o assento já estiver ocupado.
 DELIMITER //
 CREATE TRIGGER trg_assento_reserva_check
 BEFORE INSERT ON AssentoReserva
@@ -76,6 +81,7 @@ END //
 DELIMITER ;
 
 -- 5. Trigger para atualizar status da poltrona após reserva
+-- Bloqueia Assento: Marca o assento como indisponível após a reserva.
 DELIMITER //
 CREATE TRIGGER trg_assento_reserva_update_poltrona
 AFTER INSERT ON AssentoReserva
