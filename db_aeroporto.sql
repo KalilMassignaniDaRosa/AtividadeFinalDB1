@@ -350,3 +350,17 @@ CREATE TABLE ManutencaoAeronave (
     CONSTRAINT chk_datas_manutencao CHECK (data_inicio <= COALESCE(data_conclusao, '2100-12-31'))
 );
 
+-- Index 
+CREATE INDEX idx_voo_status ON Voo(status);
+CREATE INDEX idx_voo_partida_prevista ON Voo(partida_prevista);
+CREATE INDEX idx_voo_chegada_prevista ON Voo(chegada_prevista);
+CREATE INDEX idx_reserva_cliente ON Reserva(id_cliente);
+CREATE INDEX idx_reserva_status ON Reserva(status);
+CREATE INDEX idx_reserva_data ON Reserva(data_reserva);
+CREATE INDEX idx_cliente_nome ON Cliente(primeiro_nome, sobrenome);
+CREATE INDEX idx_cliente_documento ON Cliente(documento);
+CREATE INDEX idx_aeronave_status ON Aeronave(status);
+CREATE INDEX idx_aeronave_manutencao ON Aeronave(proxima_manutencao);
+CREATE INDEX idx_poltronavoo_disponivel ON PoltronaVoo(disponivel);
+CREATE INDEX idx_poltronavoo_voo ON PoltronaVoo(id_voo);
+CREATE INDEX idx_assentoreserva_voo ON AssentoReserva(id_voo);
