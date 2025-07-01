@@ -52,7 +52,7 @@ CREATE TABLE Aeronave (
     capacidade_tanque_litros DOUBLE NOT NULL,
     proxima_manutencao DATE NOT NULL,
     horas_voo_total INT DEFAULT 0,
-    status ENUM('Disponivel', 'Em manutencao', 'Desativada') DEFAULT 'Disponivel',
+    status ENUM('Disponivel', 'EmManutencao', 'Desativada') DEFAULT 'Disponivel',
     CONSTRAINT pk_aeronave PRIMARY KEY (id_aeronave),
     CONSTRAINT fk_aeronave_tipo FOREIGN KEY (id_tipo) REFERENCES TipoAeronave(id_tipo)
 );
@@ -113,7 +113,7 @@ CREATE TABLE Voo (
     chegada_real DATETIME,
     id_portao_embarque INT,
     combustivel_carregado_litros DOUBLE DEFAULT 0,
-    status ENUM('Agendado', 'Embarque', 'Decolado', 'Em rota', 'Aterrissado', 'Cancelado', 'Atrasado') DEFAULT 'Agendado',
+    status ENUM('Agendado', 'Embarque', 'Decolado', 'EmRota', 'Aterrissado', 'Cancelado', 'Atrasado') DEFAULT 'Agendado',
     status_anterior VARCHAR(50) DEFAULT NULL,
     CONSTRAINT pk_voo PRIMARY KEY (id_voo),
     CONSTRAINT fk_voo_aeronave FOREIGN KEY (id_aeronave) REFERENCES Aeronave(id_aeronave),
@@ -178,79 +178,86 @@ CREATE TABLE Endereco (
     CONSTRAINT fk_endereco_cidade FOREIGN KEY (id_cidade) REFERENCES Cidade(id_cidade)
 );
 
--- 12. Clientes
-CREATE TABLE Cliente (
-    id_cliente INT AUTO_INCREMENT,
-    documento VARCHAR(20) NOT NULL UNIQUE,
-    tipo_documento ENUM('CPF', 'Passaporte', 'RG', 'Certidao') NOT NULL,
+-- 12. Tabela Base de Pessoas
+CREATE TABLE Pessoa (
+    id_pessoa INT AUTO_INCREMENT,
     primeiro_nome VARCHAR(50) NOT NULL,
     sobrenome VARCHAR(50) NOT NULL,
     data_nascimento DATE NOT NULL,
-    email VARCHAR(100) UNIQUE,
+    tipo_documento ENUM('CPF','RG','Passaporte','CertidaoNascimento') NOT NULL,
+    numero_documento VARCHAR(50) NOT NULL,
+    email VARCHAR(100),
     telefone VARCHAR(20),
-    id_endereco INT,
     nacionalidade VARCHAR(50),
-    data_cadastro DATE NOT NULL DEFAULT (CURRENT_DATE),
-    milhas_acumuladas INT DEFAULT 0,
+    data_cadastro DATE NOT NULL,
+    categoria_fidelidade ENUM('Basic','Silver','Gold','Platinum') DEFAULT 'Basic',
     aceita_marketing BOOLEAN DEFAULT TRUE,
-    preferencia_comunicacao ENUM('Email', 'SMS', 'Correio', 'WhatsApp'),
-    categoria_fidelidade ENUM('Basic', 'Silver', 'Gold', 'Platinum') DEFAULT 'Basic',
-    CONSTRAINT pk_cliente PRIMARY KEY (id_cliente),
-    CONSTRAINT fk_cliente_endereco FOREIGN KEY (id_endereco) REFERENCES Endereco(id_endereco)
+    preferencia_comunicacao ENUM('Email','SMS','Correio','WhatsApp'),
+    CONSTRAINT pk_pessoa PRIMARY KEY (id_pessoa),
+    CONSTRAINT unq_pessoa_doc UNIQUE (tipo_documento, numero_documento)
 );
 
--- 13. Documentos para Crianças
+-- 13. Clientes
+CREATE TABLE Cliente (
+    id_cliente INT AUTO_INCREMENT,
+    id_pessoa INT NOT NULL,
+    milhas_acumuladas INT DEFAULT 0,
+    CONSTRAINT pk_cliente PRIMARY KEY (id_cliente),
+    CONSTRAINT fk_cliente_pessoa FOREIGN KEY (id_pessoa) REFERENCES Pessoa(id_pessoa)
+);
+
+-- 14. Documentos para Crianças
 CREATE TABLE DocumentoCrianca (
     id_documento INT AUTO_INCREMENT,
-    id_cliente INT NOT NULL,
-    tipo_documento ENUM('CertidaoNascimento', 'RG', 'Passaporte') NOT NULL,
+    id_pessoa INT NOT NULL,
+    tipo_documento ENUM('CertidaoNascimento','RG','Passaporte') NOT NULL,
     numero VARCHAR(50) NOT NULL,
     data_emissao DATE NOT NULL,
     orgao_emissor VARCHAR(50),
     CONSTRAINT pk_documento PRIMARY KEY (id_documento),
-    CONSTRAINT fk_documento_cliente FOREIGN KEY (id_cliente) REFERENCES Cliente(id_cliente),
-    CONSTRAINT unq_cliente_tipo UNIQUE (id_cliente, tipo_documento)
+    CONSTRAINT fk_documento_pessoa FOREIGN KEY (id_pessoa) REFERENCES Pessoa(id_pessoa),
+    CONSTRAINT unq_pessoa_tipo_doc UNIQUE (id_pessoa, tipo_documento)
 );
 
--- 14. Responsáveis
+-- 15. Responsáveis
 CREATE TABLE Responsavel (
     id_responsavel INT AUTO_INCREMENT,
-    id_crianca INT NOT NULL,
+    id_crianca INT NOT NULL, 
     id_adulto INT NOT NULL,
-    parentesco ENUM('Pai', 'Mae', 'Tutor', 'ResponsavelLegal') NOT NULL,
+    parentesco ENUM('Pai','Mae','Tutor','ResponsavelLegal') NOT NULL,
     documento_responsabilidade VARCHAR(50) NOT NULL,
     data_inicio DATE NOT NULL,
     data_termino DATE,
     CONSTRAINT pk_responsavel PRIMARY KEY (id_responsavel),
-    CONSTRAINT fk_responsavel_crianca FOREIGN KEY (id_crianca) REFERENCES Cliente(id_cliente),
-    CONSTRAINT fk_responsavel_adulto FOREIGN KEY (id_adulto) REFERENCES Cliente(id_cliente),
-    CONSTRAINT chk_datas CHECK (data_inicio <= COALESCE(data_termino, '9999-12-31'))
+    CONSTRAINT fk_responsavel_crianca FOREIGN KEY (id_crianca) REFERENCES Pessoa(id_pessoa),
+    CONSTRAINT fk_responsavel_adulto FOREIGN KEY (id_adulto) REFERENCES Pessoa(id_pessoa),
+    CONSTRAINT chk_datas_responsavel CHECK (data_inicio <= COALESCE(data_termino,'9999-12-31'))
 );
 
--- 15. Reservas 
+-- 16. Reservas 
 CREATE TABLE Reserva (
     id_reserva INT AUTO_INCREMENT,
     id_cliente INT NOT NULL,
     data_reserva DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     codigo_reserva VARCHAR(20) NOT NULL UNIQUE,
-    status ENUM('Confirmada', 'Cancelada', 'Em espera', 'CheckIn') NOT NULL,
+    status ENUM('Confirmada','Cancelada','EmEspera','CheckIn') NOT NULL,
     CONSTRAINT pk_reserva PRIMARY KEY (id_reserva),
     CONSTRAINT fk_reserva_cliente FOREIGN KEY (id_cliente) REFERENCES Cliente(id_cliente)
 );
 
--- 16. Pagamentos
+-- 17. Pagamentos
 CREATE TABLE Pagamento (
     id_pagamento INT AUTO_INCREMENT,
     id_reserva INT NOT NULL,
     valor_total DECIMAL(10,2) NOT NULL,
-    forma_pagamento ENUM('CartaoCredito', 'Debito', 'Boleto', 'Transferencia', 'Pix','Dinheiro') NOT NULL,
-    status ENUM('Pendente', 'Completo', 'Reembolsado', 'Falhou') DEFAULT 'Pendente',
+    forma_pagamento ENUM('CartaoCredito','Debito','Boleto','Transferencia','Pix','Dinheiro') NOT NULL,
+    status ENUM('Pendente','Completo','Reembolsado','Falhou') DEFAULT 'Pendente',
     data_processamento DATETIME,
     CONSTRAINT pk_pagamento PRIMARY KEY (id_pagamento),
     CONSTRAINT fk_pagamento_reserva FOREIGN KEY (id_reserva) REFERENCES Reserva(id_reserva)
 );
 
--- 17. Passageiros por Reserva 
+-- 18. Passageiros por Reserva 
 CREATE TABLE PassageiroReserva (
     id_passageiro_reserva INT AUTO_INCREMENT,
     id_reserva INT NOT NULL,
@@ -263,7 +270,7 @@ CREATE TABLE PassageiroReserva (
     CONSTRAINT unq_reserva_cliente UNIQUE (id_reserva, id_cliente)
 );
 
--- 18. Assentos Reservados
+-- 19. Assentos Reservados
 CREATE TABLE AssentoReserva (
     id_assento_reserva INT AUTO_INCREMENT,
     id_passageiro_reserva INT NOT NULL,
@@ -273,58 +280,57 @@ CREATE TABLE AssentoReserva (
     CONSTRAINT fk_assento_passageiro FOREIGN KEY (id_passageiro_reserva) REFERENCES PassageiroReserva(id_passageiro_reserva),
     CONSTRAINT fk_assento_voo FOREIGN KEY (id_voo) REFERENCES Voo(id_voo),
     CONSTRAINT fk_assento_poltrona FOREIGN KEY (id_poltrona_voo) REFERENCES PoltronaVoo(id_poltrona_voo),
-    CONSTRAINT unq_voo_poltrona UNIQUE (id_voo, id_poltrona_voo)
+    CONSTRAINT unq_assento_voo_poltrona UNIQUE (id_voo, id_poltrona_voo)
 );
 
--- 19. Bagagem
+-- 20. Bagagem
 CREATE TABLE Bagagem (
     id_bagagem INT AUTO_INCREMENT,
     id_assento_reserva INT NOT NULL,
     codigo_bagagem VARCHAR(20) NOT NULL UNIQUE,
     peso_kg DECIMAL(5,2) NOT NULL,
-    tipo ENUM('Mao', 'Despachada') NOT NULL,
-    status ENUM('Despachada', 'Transito', 'Entregue', 'Extraviada') NOT NULL,
+    tipo ENUM('Mao','Despachada') NOT NULL,
+    status ENUM('Despachada','Transito','Entregue','Extraviada') NOT NULL,
     localizacao_atual VARCHAR(100),
     data_hora_status DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT pk_bagagem PRIMARY KEY (id_bagagem),
     CONSTRAINT fk_bagagem_assento FOREIGN KEY (id_assento_reserva) REFERENCES AssentoReserva(id_assento_reserva),
-    CONSTRAINT chk_peso CHECK (peso_kg > 0)
+    CONSTRAINT chk_bagagem_peso CHECK (peso_kg > 0)
 );
 
--- 20. Tripulação 
+-- 21. Tripulação 
 CREATE TABLE Tripulante (
     id_tripulante INT AUTO_INCREMENT,
-    matricula VARCHAR(20) NOT NULL UNIQUE,
-    primeiro_nome VARCHAR(50) NOT NULL,
-    sobrenome VARCHAR(50) NOT NULL,
+    id_pessoa INT NOT NULL,
     data_validade_licenca DATE NOT NULL,
     data_ultimo_treinamento DATE NOT NULL,
-    CONSTRAINT pk_tripulante PRIMARY KEY (id_tripulante)
+    CONSTRAINT pk_tripulante PRIMARY KEY (id_tripulante),
+    CONSTRAINT fk_tripulante_pessoa FOREIGN KEY (id_pessoa) REFERENCES Pessoa(id_pessoa)
 );
 
--- 21. Habilitação de Veículos para Tripulantes
+-- 22. Habilitação de Veículos para Tripulantes
 CREATE TABLE HabilitacaoVeiculo (
     id_habilitacao INT AUTO_INCREMENT,
     id_tripulante INT NOT NULL,
-    tipo_veiculo ENUM('Aviao', 'Helicoptero', 'Jato', 'TurboHelice') NOT NULL,
+    tipo_veiculo ENUM('Aviao','Helicoptero','Jato','TurboHelice') NOT NULL,
     CONSTRAINT pk_habilitacao PRIMARY KEY (id_habilitacao),
     CONSTRAINT fk_habilitacao_tripulante FOREIGN KEY (id_tripulante) REFERENCES Tripulante(id_tripulante),
     CONSTRAINT unq_tripulante_veiculo UNIQUE (id_tripulante, tipo_veiculo)
 );
 
--- 22. Tripulação por Voo
+-- 23. Tripulação por Voo
 CREATE TABLE TripulacaoVoo (
     id_tripulacao_voo INT AUTO_INCREMENT,
     id_voo INT NOT NULL,
     id_tripulante INT NOT NULL,
-    funcao ENUM('Comandante', 'Copiloto', 'Comissario', 'Mecanico', 'Medico') NOT NULL,
+    funcao ENUM('Comandante','Copiloto','Comissario','Mecanico','Medico') NOT NULL,
     CONSTRAINT pk_tripulacao_voo PRIMARY KEY (id_tripulacao_voo),
-    CONSTRAINT fk_tripulacao_voo FOREIGN KEY (id_voo) REFERENCES Voo(id_voo),
-    CONSTRAINT fk_tripulacao_tripulante FOREIGN KEY (id_tripulante) REFERENCES Tripulante(id_tripulante),
+    CONSTRAINT fk_tripulacao_voo_voo FOREIGN KEY (id_voo) REFERENCES Voo(id_voo),
+    CONSTRAINT fk_tripulacao_voo_tripulante FOREIGN KEY (id_tripulante) REFERENCES Tripulante(id_tripulante),
     CONSTRAINT unq_voo_tripulante UNIQUE (id_voo, id_tripulante)
 );
 
--- 23. Histórico de Status de Voo 
+-- 24. Histórico de Status de Voo 
 CREATE TABLE HistoricoStatusVoo (
     id_historico INT AUTO_INCREMENT,
     id_voo INT NOT NULL,
@@ -336,31 +342,31 @@ CREATE TABLE HistoricoStatusVoo (
     CONSTRAINT fk_historico_voo FOREIGN KEY (id_voo) REFERENCES Voo(id_voo)
 );
 
--- 24. Manutenções
+-- 25. Manutenções
 CREATE TABLE ManutencaoAeronave (
     id_manutencao INT AUTO_INCREMENT,
     id_aeronave INT NOT NULL,
     data_inicio DATETIME NOT NULL,
     data_conclusao DATETIME,
-    tipo ENUM('Preventiva', 'Corretiva', 'Programada', 'Emergencial') NOT NULL,
+    tipo ENUM('Preventiva','Corretiva','Programada','Emergencial') NOT NULL,
     descricao TEXT,
     custo DECIMAL(10,2),
     CONSTRAINT pk_manutencao PRIMARY KEY (id_manutencao),
     CONSTRAINT fk_manutencao_aeronave FOREIGN KEY (id_aeronave) REFERENCES Aeronave(id_aeronave),
-    CONSTRAINT chk_datas_manutencao CHECK (data_inicio <= COALESCE(data_conclusao, '2100-12-31'))
+    CONSTRAINT chk_datas_manutencao CHECK (data_inicio <= COALESCE(data_conclusao,'2100-12-31'))
 );
 
--- Index 
+-- Index
 CREATE INDEX idx_voo_status ON Voo(status);
 CREATE INDEX idx_voo_partida_prevista ON Voo(partida_prevista);
 CREATE INDEX idx_voo_chegada_prevista ON Voo(chegada_prevista);
 CREATE INDEX idx_reserva_cliente ON Reserva(id_cliente);
 CREATE INDEX idx_reserva_status ON Reserva(status);
 CREATE INDEX idx_reserva_data ON Reserva(data_reserva);
-CREATE INDEX idx_cliente_nome ON Cliente(primeiro_nome, sobrenome);
-CREATE INDEX idx_cliente_documento ON Cliente(documento);
-CREATE INDEX idx_aeronave_status ON Aeronave(status);
-CREATE INDEX idx_aeronave_manutencao ON Aeronave(proxima_manutencao);
+CREATE INDEX idx_cliente_pessoa ON Cliente(id_pessoa);
+CREATE INDEX idx_pessoa_doc ON Pessoa(tipo_documento, numero_documento);
 CREATE INDEX idx_poltronavoo_disponivel ON PoltronaVoo(disponivel);
 CREATE INDEX idx_poltronavoo_voo ON PoltronaVoo(id_voo);
 CREATE INDEX idx_assentoreserva_voo ON AssentoReserva(id_voo);
+CREATE INDEX idx_aeronave_status ON Aeronave(status);
+CREATE INDEX idx_aeronave_manutencao ON Aeronave(proxima_manutencao);
