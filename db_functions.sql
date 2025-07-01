@@ -119,6 +119,7 @@ BEGIN
      ORDER BY v.partida_prevista
      LIMIT 1;
     
+    -- Retorna o primeiro valor nao null
     RETURN COALESCE(v_result, 'Nenhum voo agendado');
 END//
 DELIMITER ;
@@ -464,7 +465,6 @@ GROUP BY
     v.partida_prevista, 
     v.chegada_prevista, 
     v.status;
-
 
 -- 3. Mostrar clientes frequentes
 CREATE OR REPLACE VIEW vw_clientes_frequentes AS
